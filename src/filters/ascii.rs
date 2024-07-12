@@ -7,11 +7,7 @@ use imageproc::drawing::draw_text_mut;
 // Requires an image dividable by 8
 pub fn to_ascii_image(img: &DynamicImage, scale_down: u32) -> RgbaImage {
     let (w, h) = img.dimensions();
-    let mut ascii_img: RgbaImage = ImageBuffer::new(w, h);
-    for (_, _, pixel) in ascii_img.enumerate_pixels_mut() { // Basic black image
-        *pixel = Rgba([0, 0, 0, 255]);
-    }
-
+    let mut ascii_img: RgbaImage = ImageBuffer::from_pixel(w, h, Rgba([0, 0, 0, 255]));
     let down_scaled = img.resize(w/scale_down, h/scale_down, FilterType::Nearest); // Downscale image, to sample from it
 
     // Uncomment to save the pixelated image
