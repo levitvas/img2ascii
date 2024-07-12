@@ -5,7 +5,7 @@ use imageproc::drawing::draw_text_mut;
 
 // Converts an image to ascii image
 // Requires an image dividable by 8
-pub fn to_ascii_image(img: DynamicImage, scale_down: u32) -> RgbaImage {
+pub fn to_ascii_image(img: &DynamicImage, scale_down: u32) -> RgbaImage {
     let (w, h) = img.dimensions();
     let mut ascii_img: RgbaImage = ImageBuffer::new(w, h);
     for (_, _, pixel) in ascii_img.enumerate_pixels_mut() { // Basic black image
