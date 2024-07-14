@@ -1,13 +1,13 @@
 use ab_glyph::{FontRef, PxScale};
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba, RgbaImage};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 use image::imageops::FilterType;
 use imageproc::drawing::draw_text_mut;
 
 // Converts an image to ascii image
 // Requires an image dividable by 8
-pub fn to_ascii_image(img: &DynamicImage, scale_down: u32) -> RgbaImage {
+pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec<usize>>) -> RgbImage {
     let (w, h) = img.dimensions();
-    let mut ascii_img: RgbaImage = ImageBuffer::from_pixel(w, h, Rgba([0, 0, 0, 255]));
+    let mut ascii_img: RgbImage = ImageBuffer::from_pixel(w, h, Rgb([0, 0, 0]));
     let down_scaled = img.resize(w/scale_down, h/scale_down, FilterType::Nearest); // Downscale image, to sample from it
 
     // Uncomment to save the pixelated image
@@ -29,17 +29,30 @@ pub fn to_ascii_image(img: &DynamicImage, scale_down: u32) -> RgbaImage {
 
     for j in (0..h).step_by(scale_down as usize) {
         for i in (0..w).step_by(scale_down as usize) {
-            let luma_pixel = luma.get_pixel(i/scale_down, j/scale_down).0[0];
-            let index = match luma_pixel {
-                0. => 0,
-                1. => 9,
-                _ => (luma_pixel * char_len) as usize
-            };
-            draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down), i as i32, j as i32, scale, &font, chars[index]);
             
-            // Uncomment to use monochrome color
-            // let rgba_pixel = Rgba([(luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, 255]);
-            // draw_text_mut(&mut ascii_img, rgba_pixel, i as i32, j as i32, scale, &font, chars[index]); // for mono color
+            if edge_vector[j as usize][i as usize] != 5 {
+                let char_str = match edge_vector[j as usize][i as usize] {
+                    0 => "/",
+                    1 => "\\",
+                    2 => "-",
+                    3 => "|",
+                    _ => " "
+                };
+
+                draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down).to_rgb(), i as i32, j as i32, scale, &font, char_str);
+            } else {
+                let luma_pixel = luma.get_pixel(i/scale_down, j/scale_down).0[0];
+                let index = match luma_pixel {
+                    0. => 0,
+                    1. => 9,
+                    _ => (luma_pixel * char_len) as usize
+                };
+                draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down).to_rgb(), i as i32, j as i32, scale, &font, chars[index]);
+
+                // Uncomment to use monochrome color
+                // let rgba_pixel = Rgba([(luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, 255]);
+                // draw_text_mut(&mut ascii_img, rgba_pixel, i as i32, j as i32, scale, &font, chars[index]); // for mono color   
+            }
         }
     }
     

@@ -3,25 +3,31 @@ mod filters;
 use std::fs::File;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use imageproc::drawing::Canvas;
+use imageproc::filter::gaussian_blur_f32;
 use show_image::{create_window, event, ImageInfo, ImageView};
 use filters::ascii::to_ascii_image;
-use filters::sobel::sobel_filter;
+use filters::edge_detect::edge_filter;
+use filters::gaussian::gaussian_diff;
 
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>>{
-    let name = "circle.png";
+    let name = "dnight.jpg";
     let scale_down = 8;
     let img = image::open( &format!("images/{name}")).expect("Failed to open image");
     
-    // let ascii_img = to_ascii_image(img, scale_down);
-    let sobel = sobel_filter(&img);
+    let gaus = gaussian_diff(&img, 7., 20., 10, 0.9);
+    let gaus_dyn = DynamicImage::ImageRgb8(gaus.clone());
+    let (sobel, edges) = edge_filter(&gaus_dyn, &img);
+    let ascii_img = to_ascii_image(&img, scale_down, &edges);
+
     sobel.save(&format!("images/sobel-{name}")).unwrap();
-    // let mut output = File::create(&format!("images/test-{name}")).unwrap();
-    // ascii_img.write_to(&mut output, ImageFormat::Png).unwrap();
-    let dynamic_image = DynamicImage::ImageRgba8(sobel);
+    gaus.save(&format!("images/gaus-{name}")).unwrap();
+    ascii_img.save(&format!("images/ascii-{name}")).unwrap();
+
+    let dynamic_image = DynamicImage::ImageRgb8(ascii_img);
     let image_data = dynamic_image.to_rgb8();
 
-    
+
     // Create an `ImageView` from the `DynamicImage`
     let image_view = ImageView::new(ImageInfo::rgb8(dynamic_image.width(), dynamic_image.height()), &image_data);
 

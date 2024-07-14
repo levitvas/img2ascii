@@ -1,12 +1,7 @@
 use std::cmp;
-use ab_glyph::{FontRef, PxScale};
-use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, Pixel, RgbaImage, RgbImage};
-use image::imageops::FilterType;
-use imageproc::drawing::{draw_text, draw_text_mut};
+use image::{DynamicImage, RgbImage};
 
-const EDGE_THRESHOLD: i32 = 6;
-
-pub fn sobel_filter(img: &DynamicImage) -> RgbaImage {
+pub fn edge_filter(img: &DynamicImage) -> RgbImage {
     let img_buffer = img.to_luma8();
     let (width, height) = img_buffer.dimensions();
 
@@ -78,81 +73,5 @@ pub fn sobel_filter(img: &DynamicImage) -> RgbaImage {
         }
     }
 
-    println!("Max grad: {}", max_grad_x);
-    println!("Max grad: {}", max_grad_y);
-
-    let reg_img = DynamicImage::ImageRgb8(output_image);
-    let mut ascii_img: RgbaImage = ImageBuffer::from_pixel(width, height, image::Rgba([0, 0, 0, 255]));
-    let scale_down = 8;
-
-    let font = FontRef::try_from_slice(include_bytes!("../../Bescii-Mono.ttf")).unwrap();
-    let h = scale_down as f32;
-    let scale = PxScale::from(h);
-
-    let mut down_scaled = reg_img.resize(width/scale_down, height/scale_down, FilterType::Nearest); // Downscale image, to sample from it
-    // let up_scaled = down_scaled.resize(width, height, FilterType::Nearest);
-    for j in (0..height).step_by(scale_down as usize) {
-        for i in (0..width).step_by(scale_down as usize) {
-
-            let mut histogram = [0, 0, 0, 0];
-
-            for kj in j .. j + scale_down {
-                if kj >= height {
-                    break;
-                }
-                for ki in i .. i + scale_down {
-                    if ki >= width {
-                        break;
-                    }
-                    let luma_pixel = reg_img.get_pixel(ki, kj).0;
-                    let char_angle = match luma_pixel {
-                        [255, 255, 0, 255] => 0,
-                        [0, 255, 255, 255] => 1,
-                        [0, 255, 0, 255] => 2,
-                        [255, 0, 0, 255] => 3,
-                        _ => 4
-                    };
-                    if char_angle == 4 {
-                        continue;
-                    }
-                    
-                    histogram[char_angle] += 1;
-                }
-            }
-            
-            let max_char = histogram.iter().max().unwrap();
-            let max_char_index = histogram.iter().position(|&x| x == *max_char).unwrap();
-            if max_char < &EDGE_THRESHOLD {
-                continue;
-            }
-            println!("Histogram: {:?} - {} - {}", histogram, max_char_index, max_char);
-
-            let char_str = match histogram.iter().enumerate().max_by_key(|x| x.1).unwrap().0 {
-                0 => "/",
-                1 => "\\",
-                2 => "-",
-                3 => "|",
-                _ => " "
-            };
-
-            let color = match char_str {
-                "/" => [255, 255, 0, 255],
-                "\\" => [0, 255, 255, 255],
-                "-" => [0, 255, 0, 255],
-                "|" => [255, 0, 0, 255],
-                _ => [0, 0, 0, 255]
-            };
-            
-            down_scaled.put_pixel(i/scale_down, j/scale_down, image::Rgba(color));
-
-            draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down), i as i32, j as i32, scale, &font, char_str);
-        }
-    }
-
-    let up_scaled = down_scaled.resize(width, height, FilterType::Nearest);
-    up_scaled.save("images/downscaled.png").unwrap();
-
-    println!("Finised");
-
-    ascii_img
+    output_image    
 }
