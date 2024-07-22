@@ -1,19 +1,18 @@
-mod filters;
-
-use std::fs::File;
-use image::{DynamicImage, GenericImageView, ImageFormat};
-use imageproc::drawing::Canvas;
-use imageproc::filter::gaussian_blur_f32;
+use image::{DynamicImage};
 use show_image::{create_window, event, ImageInfo, ImageView};
+
 use filters::ascii::to_ascii_image;
 use filters::edge_detect::edge_filter;
 use filters::gaussian::gaussian_diff;
 
+mod filters;
+
 #[show_image::main]
 fn main() -> Result<(), Box<dyn std::error::Error>>{
-    let name = "dnight.jpg";
+    let name = "pipe.jpg";
     let scale_down = 8;
     let img = image::open( &format!("images/{name}")).expect("Failed to open image");
+    // let img = img.resize(img.width()/4, img.height()/4, image::imageops::FilterType::Nearest);
     
     let gaus = gaussian_diff(&img, 7., 20., 10, 0.9);
     let gaus_dyn = DynamicImage::ImageRgb8(gaus.clone());
