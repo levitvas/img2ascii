@@ -30,8 +30,8 @@ impl AsciiApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         ui::utils::configure_font(&cc.egui_ctx);
         Self {
-            picked_path: Some(PathBuf::from("C:\\Users\\Vasily\\RustroverProjects\\ImageToAscii\\images\\dfoe.jpg")),
-            orig_img: image::open("C:\\Users\\Vasily\\RustroverProjects\\ImageToAscii\\images\\dfoe.jpg").unwrap(),
+            picked_path: Some(PathBuf::from("images\\pipe.jpg")),
+            orig_img: image::open("images\\pipe.jpg").unwrap(),
             toasts: Toasts::default().with_anchor(BottomRight),
             sigma_one: 7,
             sigma_two: 20,
