@@ -6,19 +6,17 @@ use crate::filters;
 
 const EDGE_THRESHOLD: i32 = 6;
 
-pub fn edge_filter(img: &DynamicImage, orig: &DynamicImage) -> (RgbImage, Vec<Vec<usize>>) {
-    let reg_img = filters::sobel::edge_filter(&img);
+pub fn edge_filter(img: &DynamicImage, orig: &DynamicImage, scale_down: u32) -> (RgbImage, Vec<Vec<usize>>) {
+    let reg_img = filters::sobel::sobel(&img);
     let (width, height) = reg_img.dimensions();
 
     // let reg_img = DynamicImage::ImageRgb8(output_image);
     reg_img.save("images/edge.png").unwrap();
     let mut ascii_img: RgbImage = ImageBuffer::from_pixel(width, height, image::Rgb([0, 0, 0]));
-    let down_scaled_orig = orig.resize(width/8, height/8, FilterType::Nearest); // Downscale image, to sample from it
-    let scale_down = 8;
+    let down_scaled_orig = orig.resize(width/scale_down, height/scale_down, FilterType::Nearest); // Downscale image, to sample from it
 
     let font = FontRef::try_from_slice(include_bytes!("../../Bescii-Mono.ttf")).unwrap();
-    let h = scale_down as f32;
-    let scale = PxScale::from(h);
+    let scale = PxScale::from(scale_down as f32);
     
     let mut edge_vector = vec![vec![5; width as usize]; height as usize];
 
@@ -80,8 +78,6 @@ pub fn edge_filter(img: &DynamicImage, orig: &DynamicImage) -> (RgbImage, Vec<Ve
 
     // let up_scaled = down_scaled.resize(width, height, FilterType::Nearest);
     // up_scaled.save("images/downscaled.png").unwrap();
-
-    println!("Finised");
 
     (ascii_img, edge_vector)
 }

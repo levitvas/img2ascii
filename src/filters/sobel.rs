@@ -1,7 +1,7 @@
 use std::cmp;
 use image::{DynamicImage, RgbImage};
 
-pub fn edge_filter(img: &DynamicImage) -> RgbImage {
+pub fn sobel(img: &DynamicImage) -> RgbImage {
     let img_buffer = img.to_luma8();
     let (width, height) = img_buffer.dimensions();
 

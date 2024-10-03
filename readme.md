@@ -6,9 +6,9 @@ The main difference between my and most other projects is that it can detect edg
 will be much more defined using edge characters.
 
 ## Example
-Original             |  ASCII
-:-------------------------:|:-------------------------:
-![Original](images/pipe.jpg)  |  ![ASCII](images/ascii-pipe.jpg)
+|           Original           |              ASCII              |
+|:----------------------------:|:-------------------------------:|
+| ![Original](images/pipe.jpg) | ![ASCII](images/ascii-pipe.jpg) |
 
 ## TODO
 - [x] Basic functionality
