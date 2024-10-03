@@ -13,7 +13,8 @@ will be much more defined using edge characters.
 ## TODO
 - [x] Basic functionality
 - [x] Edge detection
-- [ ] Add GUI
+- [x] Add GUI
+- [ ] Add more options to GUI
 - [ ] Create Web App
 
 
