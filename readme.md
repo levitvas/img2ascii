@@ -10,6 +10,9 @@ will be much more defined using edge characters.
 |:----------------------------:|:-------------------------------:|
 | ![Original](images/pipe.jpg) | ![ASCII](images/ascii-pipe.jpg) |
 
+## Gui
+![image](https://github.com/user-attachments/assets/40846e3c-e397-4770-8dfc-bfb8463c8a86)
+
 ## TODO
 - [x] Basic functionality
 - [x] Edge detection
