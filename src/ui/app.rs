@@ -15,15 +15,18 @@ pub struct AsciiApp {
     pub sigma_one: i32,
     pub sigma_two: i32,
     pub threshold: i32,
+    pub edge_threshold: i32,
     pub tau: f32,
     pub scale_factor_id: i32,
     pub image_type: usize,
-    pub ascii_img: Option<image::DynamicImage>,
-    pub sobel_img: Option<image::DynamicImage>,
-    pub gaus_img: Option<image::DynamicImage>,
+    pub ascii_img: Option<DynamicImage>,
+    pub sobel_img: Option<DynamicImage>,
+    pub gaus_img: Option<DynamicImage>,
     pub edges: Option<Vec<Vec<usize>>>,
     pub changed: bool,
+    pub up_scale_factor_id: i32,
     pub scale_factors: Vec<i32>,
+    pub up_scale_factors: Vec<i32>,
 }
 
 impl AsciiApp {
@@ -36,6 +39,7 @@ impl AsciiApp {
             sigma_one: 7,
             sigma_two: 20,
             threshold: 10,
+            edge_threshold: 4,
             tau: 0.9,
             scale_factor_id: 0,
             image_type: 0,
@@ -44,56 +48,69 @@ impl AsciiApp {
             gaus_img: None,
             changed: true,
             edges: None,
+            up_scale_factor_id: 0,
             scale_factors: vec![2, 4, 8, 16],
+            up_scale_factors: vec![1, 2, 4, 8, 16],
         }
     }
 }
 
+// Add a scaling option, to scale up
+// Add auto format, so if you change name, format is still image
+// Change font button
+
 impl AsciiApp {
     pub fn update_images(&mut self, i: u32) {
         match i {
-            0 => {self.orig_img = image::open(self.picked_path.clone().unwrap()).unwrap();},
+            0 => {},
             1 => {
-                if self.changed || self.ascii_img.is_none() {
-                    if self.changed || self.edges.is_none() {
-                        if self.changed || self.gaus_img.is_none() {
-                            let gaus = filters::gaussian::gaussian_diff(&self.orig_img, self.sigma_one as f32, self.sigma_two as f32, self.threshold, self.tau);
-                            self.gaus_img = Some(DynamicImage::ImageRgb8(gaus));
-                        };
-                        if self.changed || self.sobel_img.is_none() {
-                            let (sobel, edges) = filters::edge_detect::edge_filter(&self.gaus_img.clone().unwrap(), &self.orig_img, self.get_scale_factor() as u32);
-                            self.sobel_img = Some(DynamicImage::ImageRgb8(sobel));
-                            self.edges = Some(edges);
-                        }
-                    }
-                    self.ascii_img = Some(DynamicImage::ImageRgb8(filters::ascii::to_ascii_image(&self.orig_img, self.get_scale_factor() as u32, &self.edges.clone().unwrap())));
-                }
+                self.gen_gaus();
+                self.gen_sobel();
+                self.gen_ascii();
             },
             2 => {
-                if self.changed || self.sobel_img.is_none() {
-                    if self.changed || self.gaus_img.is_none() {
-                        let gaus = filters::gaussian::gaussian_diff(&self.orig_img, self.sigma_one as f32, self.sigma_two as f32, self.threshold, self.tau);
-                        self.gaus_img = Some(DynamicImage::ImageRgb8(gaus));
-                    };
-
-                    let (sobel, edges) = filters::edge_detect::edge_filter(&self.gaus_img.clone().unwrap(), &self.orig_img, self.get_scale_factor() as u32);
-                    self.sobel_img = Some(DynamicImage::ImageRgb8(sobel));
-                    self.edges = Some(edges);
-                }
+                self.gen_gaus();
+                self.gen_sobel();
             },
             3 => {
-                if self.changed || self.gaus_img.is_none() {
-                    let gaus = filters::gaussian::gaussian_diff(&self.orig_img, self.sigma_one as f32, self.sigma_two as f32, self.threshold, self.tau);
-                    self.gaus_img = Some(DynamicImage::ImageRgb8(gaus));
-                }
+                self.gen_gaus();
             },
-            _ => todo!(),
+            _ => {},
         }
         self.changed = false;
+    }
+    
+    fn gen_gaus(&mut self) {
+        if self.changed || self.gaus_img.is_none() {
+            let gaus = filters::gaussian::gaussian_diff(&self.orig_img, self.sigma_one as f32, self.sigma_two as f32, self.threshold, self.tau);
+            self.gaus_img = Some(DynamicImage::ImageRgb8(gaus));
+            self.sobel_img = None;
+            self.ascii_img = None;
+        }
+    }
+    
+    fn gen_sobel(&mut self) {
+        if self.changed || self.sobel_img.is_none() {
+            let (sobel, edges) = filters::edge_detect::edge_filter(&self.gaus_img.clone().unwrap(), &self.orig_img, self.get_scale_factor() as u32, self.edge_threshold);
+            self.sobel_img = Some(DynamicImage::ImageRgb8(sobel));
+            self.edges = Some(edges);
+            self.ascii_img = None;
+        }
+    }
+    
+    fn gen_ascii(&mut self) {
+        if self.changed || self.ascii_img.is_none() {
+            let ascii = filters::ascii::to_ascii_image(&self.orig_img.clone(), self.get_scale_factor() as u32, &self.edges.clone().unwrap());
+            self.ascii_img = Some(DynamicImage::ImageRgb8(ascii));
+        }
     }
 
     fn get_scale_factor(&self) -> i32 {
         self.scale_factors[self.scale_factor_id as usize]
+    }
+
+    pub fn get_upscale_factor(&self) -> u32 {
+        self.up_scale_factors[self.up_scale_factor_id as usize] as u32
     }
 }
 

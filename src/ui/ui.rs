@@ -1,6 +1,10 @@
+use std::ptr::read;
 use eframe::egui;
 use egui::{FontId, RichText, Vec2};
 use std::time::Duration;
+use image::imageops::FilterType;
+use image::ImageReader;
+use imageproc::drawing::Canvas;
 use crate::ui;
 
 pub fn top_panel(ctx: &egui::Context) {
@@ -36,18 +40,30 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                         {
                             if let Some(path) = rfd::FileDialog::new().pick_file() {
                                 app.picked_path = Some(path);
-                                app.orig_img = image::open(app.picked_path.clone().unwrap()).unwrap();
+                                app.orig_img = match ImageReader::open(app.picked_path.clone().unwrap()) {
+                                    Ok(reader) => match reader.with_guessed_format() {
+                                        Ok(reader) => match reader.decode() {
+                                            Ok(img) => img,
+                                            Err(e) => panic!("Failed to decode image: {:?}", e),
+                                        },
+                                        Err(e) => panic!("Failed to guess image format: {:?}", e),
+                                    },
+                                    Err(e) => panic!("Failed to open image: {:?}", e),
+                                };
+                                
                                 // Crops the image, so that division works well without errors
                                 if app.orig_img.width() % (app.scale_factors[app.scale_factors.len()-1] as u32) != 0 {
                                     let crop_pixels = app.orig_img.width() % (app.scale_factors[app.scale_factors.len()-1] as u32);
-                                    app.toasts.error(format!("Image width will be cropped by {}", crop_pixels)).set_duration(Option::from(Duration::from_secs(5)));
+                                    app.toasts.info(format!("Image width will be cropped by {}", crop_pixels)).set_duration(Option::from(Duration::from_secs(5)));
                                     app.orig_img = app.orig_img.crop(0, 0, app.orig_img.width()-crop_pixels, app.orig_img.height());
                                 }
                                 if app.orig_img.height() % (app.scale_factors[app.scale_factors.len()-1] as u32) != 0 {
                                     let crop_pixels = app.orig_img.height() % (app.scale_factors[app.scale_factors.len()-1] as u32);
-                                    app.toasts.error(format!("Image height will be cropped by {}", crop_pixels)).set_duration(Option::from(Duration::from_secs(5)));
+                                    app.toasts.info(format!("Image height will be cropped by {}", crop_pixels)).set_duration(Option::from(Duration::from_secs(5)));
                                     app.orig_img = app.orig_img.crop(0, 0, app.orig_img.width(), app.orig_img.height()-crop_pixels);
                                 }
+                                app.changed = true;
+                                app.update_images(app.image_type as u32);
                             }
                         }
                     });
@@ -61,11 +77,17 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                         {
                             let res = rfd::FileDialog::new()
                                 .set_file_name(&format!("ascii-{}", app.picked_path.as_ref().unwrap().file_name().unwrap().to_str().unwrap()))
+                                .add_filter("PNG", &["png"])
                                 .save_file();
 
                             println!("The user choose: {:#?}", res);
                             if let Some(path) = res {
-                                app.ascii_img.as_ref().unwrap().save(path).unwrap();
+                                match app.image_type { 
+                                    1 => {app.ascii_img.as_ref().unwrap().save(path).unwrap();},
+                                    2 => {app.sobel_img.as_ref().unwrap().save(path).unwrap();},
+                                    3 => {app.gaus_img.as_ref().unwrap().save(path).unwrap();},
+                                    _ => {app.toasts.info("Did not save!").set_duration(Option::from(Duration::from_secs(5)));},
+                                }
                                 app.toasts.success("Saved!").set_duration(Option::from(Duration::from_secs(5)));
                             } else {
                                 app.toasts.error("Could not save the image").set_duration(Option::from(Duration::from_secs(5)));
@@ -117,16 +139,10 @@ pub fn central_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                                         egui::Color32::from_rgb(60, 60, 60)
                                     });
                                 
-                                
-                                // TODO: Check if an image already exists and the parameters were not changed
-                                // TODO: Do not copy the image, just display the correct one
-                                
-                                
                                 if ui.add(button).clicked() {
                                     if app.image_type != i {
-                                        app.changed = true;
-                                        app.update_images(i as u32);
                                         app.image_type = i;
+                                        app.update_images(i as u32);
                                     }
                                 }
                             });
@@ -145,19 +161,24 @@ pub fn central_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                         ui.add_space(10.0);
                         ui.heading("Parameter Control");
                         ui.add_space(25.0);
-                        ui.add(egui::Slider::new(&mut app.sigma_one, 0..=20).text("Sigma One"));
+                        ui.add(egui::Slider::new(&mut app.sigma_one, 1..=20).text("Sigma One"));
                         ui.add_space(20.0);
-                        ui.add(egui::Slider::new(&mut app.sigma_two, 0..=50).text("Sigma Two"));
+                        ui.add(egui::Slider::new(&mut app.sigma_two, 1..=50).text("Sigma Two"));
                         ui.add_space(20.0);
-                        ui.add(egui::Slider::new(&mut app.threshold, 0..=50).text("Threshold"));
+                        ui.add(egui::Slider::new(&mut app.threshold, 1..=50).text("Threshold"));
                         ui.add_space(20.0);
-                        let _tau_slider = ui.add(egui::Slider::new(&mut app.tau, 0.0..=1.0).text("Tau"));
+                        ui.add(egui::Slider::new(&mut app.edge_threshold, 1..=10).text("Edge Threshold")).on_hover_text("Determines how many pixels are needed to form an edge");
+                        ui.add_space(20.0);
+                        let _tau_slider = ui.add(egui::Slider::new(&mut app.tau, 0.1..=1.0).text("Tau"));
 
                         ui.add_space(40.0);
                         ui.add(egui::Slider::new(&mut app.scale_factor_id, 0..=(app.scale_factors.len() as i32)-1).text("Scale Down").custom_formatter(|x, _| {
                             format!("{}", app.scale_factors[x as usize])
                         }));
-
+                        ui.add_space(20.0);
+                        ui.add(egui::Slider::new(&mut app.up_scale_factor_id, 0..=(app.up_scale_factors.len() as i32)-1).text("Upscale").custom_formatter(|x, _| {
+                            format!("{}", app.up_scale_factors[x as usize])
+                        }));
                         
                         ui.add_space(ui.available_height()*0.8);
                         if ui.add(egui::Button::new("Apply")

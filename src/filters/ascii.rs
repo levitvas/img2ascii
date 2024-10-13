@@ -54,7 +54,7 @@ pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec
             } else {
                 let mut index = (luma_pixel * char_len) as usize;
                 if index >= chars.len() {
-                    index = 9;
+                    index = chars.len() - 1;
                 }
                 draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down).to_rgb(), i as i32, j as i32, scale, &font, chars[index]);
 
