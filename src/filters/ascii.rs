@@ -2,14 +2,16 @@ use std::cmp::max;
 use ab_glyph::{FontRef, PxScale};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 use image::imageops::FilterType;
-use imageproc::drawing::draw_text_mut;
+use imageproc::drawing::{draw_text_mut};
 
 // Converts an image to ascii image
 // Requires an image dividable by 8
-pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec<usize>>) -> RgbImage {
+pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec<usize>>, upscale: u32) -> RgbImage {
     let (w, h) = img.dimensions();
-    let mut ascii_img: RgbImage = ImageBuffer::from_pixel(w, h, Rgb([0, 0, 0]));
+    let base_char_size = 8;
     let down_scaled = img.resize(w/scale_down, h/scale_down, FilterType::Nearest); // Downscale image, to sample from it
+    let mut ascii_img: RgbImage = ImageBuffer::from_pixel(down_scaled.width()*base_char_size, down_scaled.height()*base_char_size, Rgb([0, 0, 0]));
+    let (new_w, new_h) = ascii_img.dimensions();
 
     // Uncomment to save the pixelated image
     // let up_scaled = down_scaled.resize(w, h, FilterType::Nearest);
@@ -30,17 +32,17 @@ pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec
     }
 
     let font = FontRef::try_from_slice(include_bytes!("../../Bescii-Mono.ttf")).unwrap();
-    let height = scale_down as f32;
-    let scale = PxScale::from(height);
+    let scale = PxScale::from(base_char_size as f32);
 
-    for j in (0..h).step_by(scale_down as usize) {
-        for i in (0..w).step_by(scale_down as usize) {
 
-            let luma_pixel = luma.get_pixel(i/scale_down, j/scale_down).0[0];
+    for j in (0..down_scaled.height()) {
+        for i in (0..down_scaled.width()) {
+
+            let luma_pixel = luma.get_pixel(i, j).0[0];
             let rgb_pixel = Rgb([(luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8]);
             
-            if edge_vector[j as usize][i as usize] != 5 {
-                let char_str = match edge_vector[j as usize][i as usize] {
+            if edge_vector[(j * scale_down) as usize][(i * scale_down) as usize] != 5 {
+                let char_str = match edge_vector[(j * scale_down) as usize][(i * scale_down) as usize] {
                     0 => "/",
                     1 => "\\",
                     2 => "-",
@@ -48,7 +50,7 @@ pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec
                     _ => " "
                 };
 
-                draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down).to_rgb(), i as i32, j as i32, scale, &font, char_str);
+                draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i, j).to_rgb(), (i * base_char_size) as i32, (j * base_char_size) as i32, scale, &font, char_str);
                 // draw_text_mut(&mut ascii_img, rgb_pixel, i as i32, j as i32, scale, &font, char_str); // for mono color   
                 
             } else {
@@ -56,13 +58,17 @@ pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec
                 if index >= chars.len() {
                     index = chars.len() - 1;
                 }
-                draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i/scale_down, j/scale_down).to_rgb(), i as i32, j as i32, scale, &font, chars[index]);
+                draw_text_mut(&mut ascii_img, down_scaled.get_pixel(i, j).to_rgb(), (i * base_char_size) as i32, (j * base_char_size) as i32, scale, &font, chars[index]);
 
                 // Uncomment to use monochrome color
                 // draw_text_mut(&mut ascii_img, rgb_pixel, i as i32, j as i32, scale, &font, chars[index]); // for mono color   
             }
         }
     }
-    
-    ascii_img
+
+    if upscale > 1 {
+        DynamicImage::ImageRgb8(ascii_img).resize(new_w * upscale, new_h * upscale, FilterType::Nearest).to_rgb8()
+    } else {
+        ascii_img
+    }
 }

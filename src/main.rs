@@ -1,9 +1,4 @@
 use eframe::egui;
-use image::{DynamicImage};
-
-use filters::ascii::to_ascii_image;
-use filters::edge_detect::edge_filter;
-use filters::gaussian::gaussian_diff;
 
 mod filters;
 mod ui;

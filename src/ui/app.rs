@@ -100,7 +100,7 @@ impl AsciiApp {
     
     fn gen_ascii(&mut self) {
         if self.changed || self.ascii_img.is_none() {
-            let ascii = filters::ascii::to_ascii_image(&self.orig_img.clone(), self.get_scale_factor() as u32, &self.edges.clone().unwrap());
+            let ascii = filters::ascii::to_ascii_image(&self.orig_img.clone(), self.get_scale_factor() as u32, &self.edges.clone().unwrap(), self.get_upscale_factor());
             self.ascii_img = Some(DynamicImage::ImageRgb8(ascii));
         }
     }

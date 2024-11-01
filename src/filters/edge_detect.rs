@@ -56,6 +56,6 @@ pub fn edge_filter(img: &DynamicImage, orig: &DynamicImage, scale_down: u32, edg
             }
         }
     }
-
+    
     (ascii_img, edge_vector)
 }
