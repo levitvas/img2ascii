@@ -52,11 +52,11 @@ pub fn sobel(img: &DynamicImage) -> RgbImage {
             let angle = f32::atan2(grad_y as f32, grad_x as f32);
 
             let normalized_angle = ((angle * 0.5) / std::f32::consts::PI) + 0.5;
-            let quantized = (normalized_angle * 4.).floor() / 4.;
+            let _quantized = (normalized_angle * 4.).floor() / 4.;
 
 
             if grad != 0.{
-                let normed = (grad as f32 * 255. / max_grad as f32) as u8;
+                let _normed = (grad as f32 * 255. / max_grad as f32) as u8;
                 // println!("Angle: {}, Normalized: {}", angle, normalized_angle);
                 if (0. < normalized_angle && normalized_angle < 0.25) || (0.5 < normalized_angle && normalized_angle < 0.75) {
                     output_image.put_pixel(x, y, image::Rgb([255, 255, 0]));

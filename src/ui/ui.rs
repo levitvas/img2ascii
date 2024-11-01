@@ -1,10 +1,7 @@
-use std::ptr::read;
 use eframe::egui;
 use egui::{FontId, RichText, Vec2};
 use std::time::Duration;
-use image::imageops::FilterType;
 use image::ImageReader;
-use imageproc::drawing::Canvas;
 use crate::ui;
 
 pub fn top_panel(ctx: &egui::Context) {

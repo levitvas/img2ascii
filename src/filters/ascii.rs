@@ -1,4 +1,3 @@
-use std::cmp::max;
 use ab_glyph::{FontRef, PxScale};
 use image::{DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 use image::imageops::FilterType;
@@ -35,11 +34,11 @@ pub fn to_ascii_image(img: &DynamicImage, scale_down: u32, edge_vector: &Vec<Vec
     let scale = PxScale::from(base_char_size as f32);
 
 
-    for j in (0..down_scaled.height()) {
-        for i in (0..down_scaled.width()) {
+    for j in 0..down_scaled.height() {
+        for i in 0..down_scaled.width() {
 
             let luma_pixel = luma.get_pixel(i, j).0[0];
-            let rgb_pixel = Rgb([(luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8]);
+            // let rgb_pixel = Rgb([(luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8, (luma_pixel * 255.) as u8]);
             
             if edge_vector[(j * scale_down) as usize][(i * scale_down) as usize] != 5 {
                 let char_str = match edge_vector[(j * scale_down) as usize][(i * scale_down) as usize] {
