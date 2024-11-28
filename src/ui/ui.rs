@@ -1,6 +1,7 @@
 use eframe::egui;
-use egui::{FontId, RichText, Vec2};
+use egui::{popup_below_widget, FontId, Id, PopupCloseBehavior, RichText, Vec2};
 use std::time::Duration;
+use eframe::emath::TSTransform;
 use image::ImageReader;
 use crate::ui;
 
@@ -26,11 +27,11 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                 ui.add_space(10.0);
                 ui.heading("Image Control");
                 ui.add_space(15.);
-                ui.columns(6, |cols| {
+                ui.columns(7, |cols| {
                     cols[1].vertical_centered(|ui| {
                         if ui
                             .add(egui::Button::new("Change Image").min_size(Vec2::from([
-                                ui.available_width() * 0.9,
+                                ui.available_width() * 0.95,
                                 ui.available_height() * 0.5,
                             ])))
                             .clicked()
@@ -64,10 +65,39 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                             }
                         }
                     });
-                    cols[4].vertical_centered(|ui| {
+                    cols[3].vertical_centered(|ui| {
+                        let response = ui.add(egui::Button::new("Change asciis").min_size(Vec2::from([
+                            ui.available_width() * 0.95,
+                            ui.available_height() * 0.5,
+                        ])));
+                        let popup_id = Id::new("popup_id");
+                        
+                        if response.clicked() {
+                            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+                        }
+
+                        let below = egui::AboveOrBelow::Above;
+                        let close_on_click_outside = egui::popup::PopupCloseBehavior::IgnoreClicks;
+                        egui::popup::popup_above_or_below_widget(ui, popup_id, &response, below, close_on_click_outside, |ui| {
+                            ui.set_min_width(app.charset.len() as f32 * 37.0); 
+                            ui.set_min_height(150.0);
+                            ui.add_space(10.0);
+                            ui.label("Chars separated by comma");
+                            ui.add_space(20.0);
+                            if ui.add(egui::TextEdit::singleline(&mut app.charset_text).hint_text("Write something here")).lost_focus() {
+                                if app.check_charset_correctness() {
+                                    app.charset_text = app.charset.join(", ");
+                                    app.toasts.success("Changed charset!").set_duration(Option::from(Duration::from_secs(1)));
+                                } else {
+                                    app.toasts.error("Invalid charset!").set_duration(Option::from(Duration::from_secs(3)));
+                                }
+                            };
+                        });
+                    });
+                    cols[5].vertical_centered(|ui| {
                         if ui
                             .add(egui::Button::new("Save Image").min_size(Vec2::from([
-                                ui.available_width() * 0.9,
+                                ui.available_width() * 0.95,
                                 ui.available_height() * 0.5,
                             ])))
                             .clicked()
@@ -99,22 +129,56 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
 pub fn central_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
+            // TODO: Implement this
+            // let (id, rect) = ui.allocate_space(ui.available_size());
+            // let response = ui.interact(rect, id, egui::Sense::click_and_drag());
+            // // Allow dragging the background as well.
+            // if response.dragged() {
+            //     app.transform.translation += response.drag_delta();
+            // }
+            // 
+            // // Plot-like reset
+            // if response.double_clicked() {
+            //     app.transform = TSTransform::default();
+            // }
+            // 
+            // let transform =
+            //     TSTransform::from_translation(ui.min_rect().left_top().to_vec2()) * app.transform;
+            // 
+            // if let Some(pointer) = ui.ctx().input(|i| i.pointer.hover_pos()) {
+            //     // Note: doesn't catch zooming / panning if a button in this PanZoom container is hovered.
+            //     if response.hovered() {
+            //         let pointer_in_layer = transform.inverse() * pointer;
+            //         let zoom_delta = ui.ctx().input(|i| i.zoom_delta());
+            //         let pan_delta = ui.ctx().input(|i| i.smooth_scroll_delta);
+            // 
+            //         // Zoom in on pointer:
+            //         app.transform = app.transform
+            //             * TSTransform::from_translation(pointer_in_layer.to_vec2())
+            //             * TSTransform::from_scaling(zoom_delta)
+            //             * TSTransform::from_translation(-pointer_in_layer.to_vec2());
+            // 
+            //         // Pan:
+            //         app.transform = TSTransform::from_translation(pan_delta) * app.transform;
+            //     }
+            // }
             ui.allocate_ui_with_layout(
                 [2. * ui.available_width() / 3., ui.available_height()].into(),
                 egui::Layout::top_down(egui::Align::TOP),
                 |ui| {
                     ui.vertical_centered_justified(|ui| {
+                        let img = match app.image_type {
+                            0 => {&app.orig_img},
+                            1 => {&app.ascii_img.as_ref().unwrap()},
+                            2 => {&app.sobel_img.as_ref().unwrap()},
+                            3 => {&app.gaus_img.as_ref().unwrap()},
+                            _ => {panic!("Invalid image type")},
+                        };
                         ui
                             .add_sized(
                                 Vec2::new(ui.available_width() * 0.9, ui.available_height() * 0.9),
                                 egui::Image::new(ui::utils::convert_image_to_texture(
-                                    match app.image_type {
-                                        0 => {&app.orig_img},
-                                        1 => {&app.ascii_img.as_ref().unwrap()},
-                                        2 => {&app.sobel_img.as_ref().unwrap()},
-                                        3 => {&app.gaus_img.as_ref().unwrap()},
-                                        _ => {panic!("Invalid image type")},
-                                    },
+                                    img,
                                     ui,
                                 ).unwrap()).shrink_to_fit(),
                             )
@@ -167,6 +231,9 @@ pub fn central_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                         ui.add(egui::Slider::new(&mut app.edge_threshold, 1..=10).text("Edge Threshold")).on_hover_text("Determines how many pixels are needed to form an edge");
                         ui.add_space(20.0);
                         let _tau_slider = ui.add(egui::Slider::new(&mut app.tau, 0.1..=1.0).text("Tau"));
+                        
+                        ui.add_space(40.0);
+                        ui.add(egui::Slider::new(&mut app.gamma, 0.1..=3.0).text("Gamma"));
 
                         ui.add_space(40.0);
                         ui.add(egui::Slider::new(&mut app.scale_factor_id, 0..=(app.scale_factors.len() as i32)-1).text("Scale Down").custom_formatter(|x, _| {

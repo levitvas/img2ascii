@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use eframe::egui;
+use eframe::emath::TSTransform;
 use egui_notify::Anchor::BottomRight;
 use egui_notify::Toasts;
 use image::DynamicImage;
@@ -17,6 +18,7 @@ pub struct AsciiApp {
     pub threshold: i32,
     pub edge_threshold: i32,
     pub tau: f32,
+    pub gamma: f32,
     pub scale_factor_id: i32,
     pub image_type: usize,
     pub ascii_img: Option<DynamicImage>,
@@ -27,6 +29,9 @@ pub struct AsciiApp {
     pub up_scale_factor_id: i32,
     pub scale_factors: Vec<i32>,
     pub up_scale_factors: Vec<i32>,
+    pub charset: Vec<String>,
+    pub charset_text: String,
+    pub transform: TSTransform
 }
 
 impl AsciiApp {
@@ -41,6 +46,7 @@ impl AsciiApp {
             threshold: 10,
             edge_threshold: 4,
             tau: 0.9,
+            gamma: 2.5,
             scale_factor_id: 0,
             image_type: 0,
             ascii_img: None,
@@ -51,6 +57,9 @@ impl AsciiApp {
             up_scale_factor_id: 0,
             scale_factors: vec![2, 4, 8, 16],
             up_scale_factors: vec![1, 2, 4, 8, 16],
+            charset: [" ", ".", ";", "c", "o", "P", "O", "?", "@", "■"].iter().map(|&x| x.to_string()).collect(),
+            charset_text: String::from(" , ., ;, c, o, P, O, ?, @, ■"),
+            transform: TSTransform::default()
         }
     }
 }
@@ -100,7 +109,7 @@ impl AsciiApp {
     
     fn gen_ascii(&mut self) {
         if self.changed || self.ascii_img.is_none() {
-            let ascii = filters::ascii::to_ascii_image(&self.orig_img.clone(), self.get_scale_factor() as u32, &self.edges.clone().unwrap(), self.get_upscale_factor());
+            let ascii = filters::ascii::to_ascii_image(&self.orig_img.clone(), self.get_scale_factor() as u32, &self.edges.clone().unwrap(), &self.charset, self.get_upscale_factor(), self.gamma);
             self.ascii_img = Some(DynamicImage::ImageRgb8(ascii));
         }
     }
@@ -111,6 +120,22 @@ impl AsciiApp {
 
     pub fn get_upscale_factor(&self) -> u32 {
         self.up_scale_factors[self.up_scale_factor_id as usize] as u32
+    }
+
+    pub fn check_charset_correctness(&mut self) -> bool {
+        let split_commas_remove_space: Vec<String> = self.charset_text
+            .split(',')
+            .map(|x| if x.trim().is_empty() || x.chars().all(|c| c.is_whitespace()) {
+                " ".to_string()  // Single space for any number of spaces
+            } else {
+                x.trim().to_string()
+            }).collect();
+        if split_commas_remove_space.iter().all(|x| x.chars().count() == 1) {
+            self.charset = split_commas_remove_space;
+            true
+        } else {
+            false
+        }
     }
 }
 

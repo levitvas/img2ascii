@@ -19,7 +19,8 @@ will be much more defined using edge characters.
 - [x] Add GUI
 - [ ] Add more options to GUI
     - [x] Image Upscaling
-    - [ ] Change font
+    - [ ] Smarter quantization
+    - [x] Change font
     - [ ] Different charset
 - [ ] Create Web App
 
