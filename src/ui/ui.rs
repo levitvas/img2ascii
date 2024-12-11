@@ -4,6 +4,7 @@ use std::time::Duration;
 use eframe::emath::TSTransform;
 use image::ImageReader;
 use crate::ui;
+use crate::ui::utils;
 
 pub fn top_panel(ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -37,31 +38,11 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                             .clicked()
                         {
                             if let Some(path) = rfd::FileDialog::new().pick_file() {
-                                app.picked_path = Some(path);
-                                app.orig_img = match ImageReader::open(app.picked_path.clone().unwrap()) {
-                                    Ok(reader) => match reader.with_guessed_format() {
-                                        Ok(reader) => match reader.decode() {
-                                            Ok(img) => img,
-                                            Err(e) => panic!("Failed to decode image: {:?}", e),
-                                        },
-                                        Err(e) => panic!("Failed to guess image format: {:?}", e),
-                                    },
-                                    Err(e) => panic!("Failed to open image: {:?}", e),
-                                };
-                                
-                                // Crops the image, so that division works well without errors
-                                if app.orig_img.width() % (app.scale_factors[app.scale_factors.len()-1] as u32) != 0 {
-                                    let crop_pixels = app.orig_img.width() % (app.scale_factors[app.scale_factors.len()-1] as u32);
-                                    app.toasts.info(format!("Image width will be cropped by {}", crop_pixels)).set_duration(Option::from(Duration::from_secs(5)));
-                                    app.orig_img = app.orig_img.crop(0, 0, app.orig_img.width()-crop_pixels, app.orig_img.height());
+                                if utils::change_image(app.picked_path.clone().unwrap(), app) {
+                                    app.toasts.success("Changed image!").set_duration(Option::from(Duration::from_secs(1)));
+                                } else {
+                                    app.toasts.error("Could not change the image").set_duration(Option::from(Duration::from_secs(3)));
                                 }
-                                if app.orig_img.height() % (app.scale_factors[app.scale_factors.len()-1] as u32) != 0 {
-                                    let crop_pixels = app.orig_img.height() % (app.scale_factors[app.scale_factors.len()-1] as u32);
-                                    app.toasts.info(format!("Image height will be cropped by {}", crop_pixels)).set_duration(Option::from(Duration::from_secs(5)));
-                                    app.orig_img = app.orig_img.crop(0, 0, app.orig_img.width(), app.orig_img.height()-crop_pixels);
-                                }
-                                app.changed = true;
-                                app.update_images(app.image_type as u32);
                             }
                         }
                     });
@@ -102,22 +83,11 @@ pub fn bottom_panel(ctx: &egui::Context, app: &mut ui::app::AsciiApp) {
                             ])))
                             .clicked()
                         {
-                            let res = rfd::FileDialog::new()
-                                .set_file_name(&format!("ascii-{}", app.picked_path.as_ref().unwrap().file_name().unwrap().to_str().unwrap()))
-                                .add_filter("PNG", &["png"])
-                                .save_file();
-
-                            println!("The user choose: {:#?}", res);
-                            if let Some(path) = res {
-                                match app.image_type { 
-                                    1 => {app.ascii_img.as_ref().unwrap().save(path).unwrap();},
-                                    2 => {app.sobel_img.as_ref().unwrap().save(path).unwrap();},
-                                    3 => {app.gaus_img.as_ref().unwrap().save(path).unwrap();},
-                                    _ => {app.toasts.info("Did not save!").set_duration(Option::from(Duration::from_secs(5)));},
-                                }
-                                app.toasts.success("Saved!").set_duration(Option::from(Duration::from_secs(5)));
+                            let res = utils::save_image(app);
+                            if res {
+                                app.toasts.success("Saved image!").set_duration(Option::from(Duration::from_secs(1)));
                             } else {
-                                app.toasts.error("Could not save the image").set_duration(Option::from(Duration::from_secs(5)));
+                                app.toasts.error("Could not save the image").set_duration(Option::from(Duration::from_secs(3)));
                             }
                         }
                     });

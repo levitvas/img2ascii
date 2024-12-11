@@ -145,7 +145,7 @@ impl eframe::App for AsciiApp {
         ui::ui::bottom_panel(ctx, self);
         ui::ui::central_panel(ctx, self);
 
-        ui::utils::preview_files_being_dropped(ctx);
+        ui::utils::preview_files_being_dropped(ctx, self);
 
         // Collect dropped files:
         ctx.input(|i| {
